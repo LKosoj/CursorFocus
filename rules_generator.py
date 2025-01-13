@@ -3,6 +3,7 @@ import json
 from typing import Dict, Any, List
 from datetime import datetime
 import openai
+from openai import OpenAI
 import re
 from rules_analyzer import RulesAnalyzer
 from dotenv import load_dotenv
@@ -73,9 +74,10 @@ class RulesGenerator:
             if not api_key:
                 raise ValueError("OPENAI_API_KEY is required")
 
-            openai.api_key = api_key
-            openai.base_url = "https://api.vsegpt.ru/v1"
-            self.model = openai.ChatCompletion
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://api.vsegpt.ru/v1"
+            )
             
         except Exception as e:
             print(f"\n⚠️ Error when initializing OpenAI: {e}")
@@ -295,8 +297,8 @@ Critical Guidelines for AI:
 7. UNDERSTAND pattern purposes"""
     
             # Get AI response
-            response = self.model.create(
-                model="anthropic/claude-3.5-sonnet",
+            response = self.client.chat.completions.create(
+                model="google/gemini-flash-1.5",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 top_p=0.95,
@@ -380,8 +382,8 @@ Format: Return a clear, concise description focusing on what makes this project 
 Do not include technical metrics in the description."""
 
             # Get AI response
-            response = self.model.create(
-                model="anthropic/claude-3.5-sonnet",
+            response = self.client.chat.completions.create(
+                model="google/gemini-flash-1.5",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.7,
                 top_p=0.95,
