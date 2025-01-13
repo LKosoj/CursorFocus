@@ -2,7 +2,7 @@ import os
 import json
 from typing import Dict, Any, List
 from datetime import datetime
-import google.generativeai as genai
+import openai
 import re
 from rules_analyzer import RulesAnalyzer
 from dotenv import load_dotenv
@@ -67,26 +67,18 @@ class RulesGenerator:
         # Load environment variables from .env
         load_dotenv()
         
-        # Initialize Gemini AI
+        # Initialize OpenAI
         try:
-            api_key = os.environ.get("GEMINI_API_KEY")
+            api_key = os.environ.get("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError("GEMINI_API_KEY is required")
+                raise ValueError("OPENAI_API_KEY is required")
 
-            genai.configure(api_key=api_key)
-            self.model = genai.GenerativeModel(
-                model_name="gemini-2.0-flash-exp",
-                generation_config={
-                    "temperature": 0.7,
-                    "top_p": 0.95,
-                    "top_k": 40,
-                    "max_output_tokens": 8192,
-                }
-            )
-            self.chat_session = self.model.start_chat(history=[])
+            openai.api_key = api_key
+            openai.base_url = "https://api.vsegpt.ru/v1"
+            self.model = openai.ChatCompletion
             
         except Exception as e:
-            print(f"\n⚠️ Error when initializing Gemini AI: {e}")
+            print(f"\n⚠️ Error when initializing OpenAI: {e}")
             raise
 
     def _get_timestamp(self) -> str:
@@ -186,7 +178,7 @@ class RulesGenerator:
         return structure
 
     def _generate_ai_rules(self, project_info: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate rules using Gemini AI based on project analysis."""
+        """Generate rules using OpenAI based on project analysis."""
         try:
             # Analyze project
             project_structure = self._analyze_project_structure()
@@ -303,10 +295,16 @@ Critical Guidelines for AI:
 7. UNDERSTAND pattern purposes"""
     
             # Get AI response
-            response = self.chat_session.send_message(prompt)
+            response = self.model.create(
+                model="anthropic/claude-3.5-sonnet",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                top_p=0.95,
+                max_tokens=8192
+            )
             
             # Extract JSON
-            json_match = re.search(r'({[\s\S]*})', response.text)
+            json_match = re.search(r'({[\s\S]*})', response.choices[0].message.content)
             if not json_match:
                 print("⚠️ No JSON found in AI response")
                 raise ValueError("Invalid AI response format")
@@ -382,8 +380,14 @@ Format: Return a clear, concise description focusing on what makes this project 
 Do not include technical metrics in the description."""
 
             # Get AI response
-            response = self.chat_session.send_message(prompt)
-            description = response.text.strip()
+            response = self.model.create(
+                model="anthropic/claude-3.5-sonnet",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                top_p=0.95,
+                max_tokens=8192
+            )
+            description = response.choices[0].message.content.strip()
             
             # Validate description length and content
             if len(description.split()) > 100:  # Length limit
