@@ -313,6 +313,11 @@ Critical Guidelines for AI:
                 
             json_str = json_match.group(1)
             
+            # Расширенная очистка JSON-строки
+            # Удаление комментариев
+            #json_str = re.sub(r'//.*$', '', json_str, flags=re.MULTILINE)
+            #json_str = re.sub(r'/\*.*?\*/', '', json_str, flags=re.DOTALL)
+                                    
             try:
                 ai_rules = json.loads(json_str)
                 
@@ -323,11 +328,12 @@ Critical Guidelines for AI:
                 return ai_rules
                 
             except json.JSONDecodeError as e:
-                print(f"⚠️ Error parsing AI response JSON: {e}")
+                print(f"Очищенный json_str: {json_str}")
+                print(f"⚠️ Ошибка парсинга JSON: {e}")
                 raise
                 
         except Exception as e:
-            print(f"⚠️ Error generating AI rules: {e}")
+            print(f"⚠️ Ошибка генерации правил ИИ: {e}")
             raise
 
     def _generate_project_description(self, project_structure: Dict[str, Any]) -> str:
