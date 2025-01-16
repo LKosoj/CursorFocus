@@ -63,6 +63,8 @@ def get_default_config():
             '.php': 400,
             '.phtml': 300,
             '.ctp': 300,
+            '.swift': 300,
+            '.kt': 300,
             'default': 300
         },
         'file_length_thresholds': {
@@ -109,6 +111,30 @@ def get_default_config():
         }
     }
 
+def retry_generate_rules(project_path, project_name, max_retries=5):
+    """Retry generating rules file with user confirmation."""
+    retries = 0
+    while retries < max_retries:
+        try:
+            print(f"\n📄 Analyzing: {project_path}")
+            analyzer = RulesAnalyzer(project_path)
+            project_info = analyzer.analyze_project_for_rules()
+            
+            rules_generator = RulesGenerator(project_path)
+            rules_file = rules_generator.generate_rules_file(project_info)
+            print(f"✓ {os.path.basename(rules_file)}")
+            return rules_file
+        except Exception as e:
+            retries += 1
+            if retries < max_retries:
+                print(f"\n❌ Failed to generate rules (attempt {retries}/{max_retries}): {e}")
+                response = input("Try again? (y/n): ").lower()
+                if response != 'y':
+                    raise
+            else:
+                print(f"\n❌ Failed to generate rules after {max_retries} attempts: {e}")
+                raise
+
 def setup_cursor_focus(project_path, project_name=None):
     """Set up CursorFocus for a project by generating necessary files."""
     try:
@@ -121,14 +147,8 @@ def setup_cursor_focus(project_path, project_name=None):
             if response != 'y':
                 return
         
-        # Generate .cursorrules file
-        print(f"\n📄 Analyzing: {project_path}")
-        analyzer = RulesAnalyzer(project_path)
-        project_info = analyzer.analyze_project_for_rules()
-        
-        rules_generator = RulesGenerator(project_path)
-        rules_file = rules_generator.generate_rules_file(project_info)
-        print(f"✓ {os.path.basename(rules_file)}")
+        # Generate .cursorrules file with retry mechanism
+        rules_file = retry_generate_rules(project_path, project_name)
 
         # Generate initial Focus.md with default config
         focus_file = os.path.join(project_path, 'Focus.md')
@@ -193,6 +213,8 @@ def main():
     
     if update_info:
         print(f"📦 Update available: {update_info['message']}")
+        print(f"🕒 Date: {update_info['date']}")
+        print(f"👤 Author: {update_info['author']}")
         if input("Update now? (y/n): ").lower() == 'y':
             print("⏳ Downloading...")
             if updater.update(update_info):
