@@ -24,7 +24,7 @@ Join our Discord server to discuss features, ask questions: [Discord](https://di
 
 ## Requirements
 
-- Python 3.6+
+- Python 3.10+
 - Gemini API Key (required for AI-powered features)
 
 ## API Key Setup
@@ -111,6 +111,7 @@ CursorFocus automatically generates and maintains two key files:
    - File descriptions and metrics
    - Function documentation
 2. **.cursorrules**: Project-specific Cursor settings
+   - Support format: JSON, Markdown
    - Automatically generated based on project type
    - Customized for your project's structure
    - Updates as your project evolves
@@ -160,8 +161,9 @@ CursorFocus generates a `Focus.md` file in your project root with:
 
 ## Contributing
 <a href="https://github.com/RenjiYuusei/CursorFocus/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=RenjiYuusei/CursorFocus&max=1000" />
+  <img src="https://contrib.rocks/image?repo=RenjiYuusei/CursorFocus" />
 </a>
+
 
 Contributions are welcome! Please feel free to submit pull requests or create issues for bugs and feature requests.
 
