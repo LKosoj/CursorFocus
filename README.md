@@ -18,9 +18,12 @@ Join our Discord server to discuss features, ask questions: [Discord](https://di
 - 🌳 Hierarchical directory visualization
 - 📏 File length standards and alerts
 - 🎯 Project-specific information detection
-- 🔍 Smart project type detection (Chrome Extension, Node.js, Python)
-- 🧩 Modular and extensible design
 - 🎛️ Automatic .cursorrules generation and project adaptation
+
+## Installation
+```
+irm https://raw.githubusercontent.com/RenjiYuusei/CursorFocus/refs/heads/main/install.ps1 | iex
+```
 
 ## Requirements
 
@@ -63,43 +66,26 @@ Before running CursorFocus, you need to set up your Gemini API key:
 
 CursorFocus can monitor multiple projects simultaneously. There are two ways to set this up:
 
-### 1. Automatic Project Detection
-
-Run CursorFocus with the scan option to automatically detect projects:
-
-```bash
-python CursorFocus/setup.py --scan /path/to/projects/directory
-```
-
-This will:
-
-- Scan the directory for supported project types
-- List all detected projects
-- Let you choose which projects to monitor
-
-### Project Types Supported:
-
-- Chrome Extensions (detected by manifest.json)
-- Node.js Projects (detected by package.json)
-- Python Projects (detected by setup.py or pyproject.toml)
-- React Applications (detected by src/App.js)
-- Generic Projects (basic structure)
 
 ### Manual Setup
 
 If you prefer to set up manually:
 
-1. Install dependencies (Python 3.6+ required):
+1. Install dependencies (Python 3.10+ required):
 
    ```bash
    cd CursorFocus
    pip install -r requirements.txt
    ```
 
-2. Create/edit config.json (optional)
+2. Run the setup script:
+   ```bash
+   python setup.py --p path/to/your/project
+   ```
+
 3. Run the script:
    ```bash
-   python3 focus.py
+   python focus.py
    ```
 
 ## Generated Files
@@ -115,26 +101,6 @@ CursorFocus automatically generates and maintains two key files:
    - Automatically generated based on project type
    - Customized for your project's structure
    - Updates as your project evolves
-
-## Setup
-
-1. Clone or copy the CursorFocus directory to your project:
-
-   ```bash
-   git clone https://github.com/RenjiYuusei/CursorFocus.git CursorFocus
-   ```
-
-2. Install dependencies (Python 3.6+ required):
-
-   ```bash
-   cd CursorFocus
-   pip install -r requirements.txt
-   ```
-
-3. Run the script:
-   ```bash
-   python focus.py
-   ```
 
 ## Output
 
@@ -160,10 +126,6 @@ CursorFocus generates a `Focus.md` file in your project root with:
    - File length standards compliance
 
 ## Contributing
-<a href="https://github.com/RenjiYuusei/CursorFocus/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=RenjiYuusei/CursorFocus" />
-</a>
-
 
 Contributions are welcome! Please feel free to submit pull requests or create issues for bugs and feature requests.
 
