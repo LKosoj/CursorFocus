@@ -50,3 +50,4 @@ config.json
 .last_update_check
 .current_commit
 .github/FUNDING.yml
+/.specstory
