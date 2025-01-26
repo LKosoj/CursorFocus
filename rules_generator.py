@@ -8,55 +8,53 @@ from rules_analyzer import RulesAnalyzer
 from dotenv import load_dotenv
 
 class RulesGenerator:
-    # Common regex patterns
-    IMPORT_PATTERNS = {
-        'python': r'^(?:from|import)\s+([a-zA-Z0-9_\.]+)',
-        'javascript': r'(?:import\s+.*?from\s+[\'"]([^\'\"]+)[\'"]|require\s*\([\'"]([^\'\"]+)[\'"]\))',
-        'typescript': r'(?:import|require)\s+.*?[\'"]([^\'\"]+)[\'"]',
-        'php': r'namespace\s+([a-zA-Z0-9_\\]+)',
-        'csharp': r'using\s+(?:static\s+)?([a-zA-Z0-9_\.]+);',
-        'ruby': r'require(?:_relative)?\s+[\'"]([^\'"]+)[\'"]',
-        'go': r'import\s+(?:\([^)]*\)|[\'"]([^\'\"]+)[\'"])',
-        'cpp': r'#include\s*[<"]([^>"]+)[>"]',
-        'c': r'#include\s*[<"]([^>"]+)[>"]',
-        'kotlin': r'import\s+([^\n]+)',
-        'swift': r'import\s+([^\n]+)',
+    # Common regex patterns for all languages
+    PATTERNS = {
+        'import': {
+            'python': r'^(?:from|import)\s+([a-zA-Z0-9_\.]+)',
+            'javascript': r'(?:import\s+.*?from\s+[\'"]([^\'\"]+)[\'"]|require\s*\([\'"]([^\'\"]+)[\'"]\))',
+            'typescript': r'(?:import|require)\s+.*?[\'"]([^\'\"]+)[\'"]',
+            'php': r'namespace\s+([a-zA-Z0-9_\\]+)',
+            'csharp': r'using\s+(?:static\s+)?([a-zA-Z0-9_\.]+);',
+            'ruby': r'require(?:_relative)?\s+[\'"]([^\'"]+)[\'"]',
+            'go': r'import\s+(?:\([^)]*\)|[\'"]([^\'\"]+)[\'"])',
+            'cpp': r'#include\s*[<"]([^>"]+)[>"]',
+            'c': r'#include\s*[<"]([^>"]+)[>"]',
+            'kotlin': r'import\s+([^\n]+)',
+            'swift': r'import\s+([^\n]+)',
+        },
+        'class': {
+            'python': r'class\s+(\w+)(?:\((.*?)\))?\s*:',
+            'javascript': r'class\s+(\w+)(?:\s+extends\s+(\w+))?\s*{',
+            'typescript': r'(?:class|const)\s+(\w+)(?:\s*(?:extends|implements)\s+([^{]+))?(?:\s*=\s*(?:styled|React\.memo|React\.forwardRef))?\s*[{<]',
+            'php': r'(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+(?:\\)?[a-zA-Z0-9_\\]+)?(?:\s+implements\s+(?:\\)?[a-zA-Z0-9_\\]+(?:\s*,\s*(?:\\)?[a-zA-Z0-9_\\]+)*)?',
+            'csharp': r'(?:public\s+|private\s+|protected\s+|internal\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s*:\s*([^{]+))?',
+            'ruby': r'class\s+(\w+)(?:\s*<\s*(\w+))?',
+            'go': r'type\s+(\w+)\s+struct\s*{',
+            'cpp': r'(?:class|struct)\s+(\w+)(?:\s*:\s*(?:public|private|protected)\s+(\w+))?(?:\s*{)?',
+            'c': r'(?:struct|enum|union)\s+(\w+)(?:\s*{)?',
+            'kotlin': r'(?:class|interface|object)\s+(\w+)(?:\s*:\s*([^{]+))?',
+            'swift': r'(?:class|struct|protocol|enum)\s+(\w+)(?:\s*:\s*([^{]+))?',
+        },
+        'function': {
+            'python': r'def\s+(\w+)\s*\((.*?)\)(?:\s*->\s*([^:]+))?\s*:',
+            'javascript': r'(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:function|\([^)]*\)\s*=>))\s*\((.*?)\)',
+            'typescript': r'(?:function|const)\s+(\w+)\s*(?:<[^>]+>)?\s*(?:=\s*)?(?:async\s*)?\((.*?)\)(?:\s*:\s*([^{=]+))?',
+            'php': r'(?:public\s+|private\s+|protected\s+)?(?:static\s+)?function\s+(\w+)\s*\([^)]*\)',
+            'csharp': r'(?:public|private|protected|internal)?\s*(?:static\s+)?(?:async\s+)?(?:virtual\s+)?(?:<[^>]+>\s+)?(\w+)\s+(\w+)\s*\((.*?)\)',
+            'ruby': r'def\s+(?:self\.)?\s*(\w+)(?:\((.*?)\))?',
+            'go': r'func\s+(?:\(\w+\s+[^)]+\)\s+)?(\w+)\s*\((.*?)\)(?:\s*\([^)]*\)|[^{]+)?',
+            'cpp': r'(?:virtual\s+)?(?:[\w:]+\s+)?(\w+)\s*\((.*?)\)(?:\s*(?:const|override|final|noexcept))?\s*(?:{\s*)?',
+            'c': r'(?:static\s+)?(?:[\w*]+\s+)?(\w+)\s*\((.*?)\)(?:\s*{)?',
+            'kotlin': r'fun\s+(\w+)\s*\((.*?)\)(?:\s*:\s*([^{]+))?',
+            'swift': r'func\s+(\w+)\s*\((.*?)\)(?:\s*->\s*([^{]+))?',
+        },
+        'method': r'(?:async\s+)?(\w+)\s*\((.*?)\)\s*{',
+        'variable': r'(?:const|let|var)\s+(\w+)\s*=\s*([^;]+)',
+        'error': r'try\s*{[^}]*}\s*catch\s*\((\w+)\)',
+        'interface': r'(?:interface|type)\s+(\w+)(?:\s+extends\s+([^{]+))?',
+        'jsx_component': r'<(\w+)(?:\s+[^>]*)?>'
     }
-
-    CLASS_PATTERNS = {
-        'python': r'class\s+(\w+)(?:\((.*?)\))?\s*:',
-        'javascript': r'class\s+(\w+)(?:\s+extends\s+(\w+))?\s*{',
-        'typescript': r'(?:class|const)\s+(\w+)(?:\s*(?:extends|implements)\s+([^{]+))?(?:\s*=\s*(?:styled|React\.memo|React\.forwardRef))?\s*[{<]',
-        'php': r'(?:abstract\s+)?class\s+(\w+)(?:\s+extends\s+(?:\\)?[a-zA-Z0-9_\\]+)?(?:\s+implements\s+(?:\\)?[a-zA-Z0-9_\\]+(?:\s*,\s*(?:\\)?[a-zA-Z0-9_\\]+)*)?',
-        'csharp': r'(?:public\s+|private\s+|protected\s+|internal\s+)?(?:abstract\s+)?class\s+(\w+)(?:\s*:\s*([^{]+))?',
-        'ruby': r'class\s+(\w+)(?:\s*<\s*(\w+))?',
-        'go': r'type\s+(\w+)\s+struct\s*{',
-        'cpp': r'(?:class|struct)\s+(\w+)(?:\s*:\s*(?:public|private|protected)\s+(\w+))?(?:\s*{)?',
-        'c': r'(?:struct|enum|union)\s+(\w+)(?:\s*{)?',
-        'kotlin': r'(?:class|interface|object)\s+(\w+)(?:\s*:\s*([^{]+))?',
-        'swift': r'(?:class|struct|protocol|enum)\s+(\w+)(?:\s*:\s*([^{]+))?',
-
-    }
-
-    FUNCTION_PATTERNS = {
-        'python': r'def\s+(\w+)\s*\((.*?)\)(?:\s*->\s*([^:]+))?\s*:',
-        'javascript': r'(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:function|\([^)]*\)\s*=>))\s*\((.*?)\)',
-        'typescript': r'(?:function|const)\s+(\w+)\s*(?:<[^>]+>)?\s*(?:=\s*)?(?:async\s*)?\((.*?)\)(?:\s*:\s*([^{=]+))?',
-        'php': r'(?:public\s+|private\s+|protected\s+)?(?:static\s+)?function\s+(\w+)\s*\([^)]*\)',
-        'csharp': r'(?:public|private|protected|internal)?\s*(?:static\s+)?(?:async\s+)?(?:virtual\s+)?(?:<[^>]+>\s+)?(\w+)\s+(\w+)\s*\((.*?)\)',
-        'ruby': r'def\s+(?:self\.)?\s*(\w+)(?:\((.*?)\))?',
-        'go': r'func\s+(?:\(\w+\s+[^)]+\)\s+)?(\w+)\s*\((.*?)\)(?:\s*\([^)]*\)|[^{]+)?',
-        'cpp': r'(?:virtual\s+)?(?:[\w:]+\s+)?(\w+)\s*\((.*?)\)(?:\s*(?:const|override|final|noexcept))?\s*(?:{\s*)?',
-        'c': r'(?:static\s+)?(?:[\w*]+\s+)?(\w+)\s*\((.*?)\)(?:\s*{)?',
-        'kotlin': r'fun\s+(\w+)\s*\((.*?)\)(?:\s*:\s*([^{]+))?',
-        'swift': r'func\s+(\w+)\s*\((.*?)\)(?:\s*->\s*([^{]+))?',
-    }
-
-    METHOD_PATTERN = r'(?:async\s+)?(\w+)\s*\((.*?)\)\s*{'
-    VARIABLE_PATTERN = r'(?:const|let|var)\s+(\w+)\s*=\s*([^;]+)'
-    ERROR_PATTERN = r'try\s*{[^}]*}\s*catch\s*\((\w+)\)'
-    INTERFACE_PATTERN = r'(?:interface|type)\s+(\w+)(?:\s+extends\s+([^{]+))?'
-    JSX_COMPONENT_PATTERN = r'<(\w+)(?:\s+[^>]*)?>'
 
     def __init__(self, project_path: str):
         self.project_path = project_path
@@ -322,7 +320,7 @@ Project Ecosystem:
 
 2. Project Components:
 - Core Modules:
-{chr(10).join([f"- {f}: {sum(1 for p in project_structure['patterns']['function_patterns'] if p['file'] == f)} functions" for f in project_structure['files'] if f.endswith('.py, .js, .ts, .tsx, .kt, .php, .swift, .cpp, .c, .ino, .h, .hpp, .cs, .csx') and not any(x in f.lower() for x in ['setup', 'config'])][:5])}
+{chr(10).join([f"- {f}: {sum(1 for p in project_structure['patterns']['function_patterns'] if p['file'] == f)} functions" for f in project_structure['files'] if f.endswith('.py, .js, .ts, .tsx, .kt, .php, .swift, .cpp, .c, .h, .hpp, .cs, .csx') and not any(x in f.lower() for x in ['setup', 'config'])][:5])}
 - Support Modules:
 {chr(10).join([f"- {f}" for f in project_structure['files'] if any(x in f.lower() for x in ['util', 'helper', 'common', 'shared'])][:5])}
 - Templates:
@@ -330,10 +328,10 @@ Project Ecosystem:
 
 3. Module Organization Analysis:
 - Core Module Functions:
-{chr(10).join([f"- {f}: Primary module handling {f.split('_')[0].title()} functionality" for f in project_structure['files'] if f.endswith('.py, .js, .ts, .tsx, .kt, .php, .swift, .cpp, .c, .h, .hpp, .cs, .csx, .ino') and not any(x in f.lower() for x in ['setup', 'config'])][:5])}
+{chr(10).join([f"- {f}: Primary module handling {f.split('_')[0].title()} functionality" for f in project_structure['files'] if f.endswith('.py, .js, .ts, .tsx, .kt, .php, .swift, .cpp, .c, .h, .hpp, .cs, .csx') and not any(x in f.lower() for x in ['setup', 'config'])][:5])}
 
 - Module Dependencies:
-{chr(10).join([f"- {f} depends on: {', '.join(list(set([imp.split('.')[0] for imp in project_structure['patterns']['imports'] if imp in f])))}" for f in project_structure['files'] if f.endswith('.py, .js, .ts, .tsx, .kt, .php, .swift, .cpp, .c, .h, .hpp, .cs, .csx, .ino')][:5])}
+{chr(10).join([f"- {f} depends on: {', '.join(list(set([imp.split('.')[0] for imp in project_structure['patterns']['imports'] if imp in f])))}" for f in project_structure['files'] if f.endswith('.py, .js, .ts, .tsx, .kt, .php, .swift, .cpp, .c, .h, .hpp, .cs, .csx')][:5])}
 
 - Module Responsibilities:
 Please analyze each module's code and describe its core responsibilities based on:
@@ -635,12 +633,12 @@ Do not include technical metrics in the description."""
     def _analyze_python_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze Python file content."""
         # Find imports and dependencies
-        imports = re.findall(self.IMPORT_PATTERNS['python'], content, re.MULTILINE)
+        imports = re.findall(self.PATTERNS['import']['python'], content, re.MULTILINE)
         structure['dependencies'].update({imp: True for imp in imports})
         structure['patterns']['imports'].extend(imports)
         
         # Find classes and their patterns
-        class_patterns = re.finditer(self.CLASS_PATTERNS['python'], content)
+        class_patterns = re.finditer(self.PATTERNS['class']['python'], content)
         for match in class_patterns:
             class_name = match.group(1)
             inheritance = match.group(2) if match.group(2) else ''
@@ -651,7 +649,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find and analyze functions
-        function_patterns = re.finditer(self.FUNCTION_PATTERNS['python'], content)
+        function_patterns = re.finditer(self.PATTERNS['function']['python'], content)
         for match in function_patterns:
             func_name = match.group(1)
             params = match.group(2)
@@ -666,13 +664,13 @@ Do not include technical metrics in the description."""
     def _analyze_js_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze JavaScript file content."""
         # Find imports
-        imports = re.findall(self.IMPORT_PATTERNS['javascript'], content)
+        imports = re.findall(self.PATTERNS['import']['javascript'], content)
         imports = [imp[0] or imp[1] for imp in imports]  # Flatten tuples from regex groups
         structure['dependencies'].update({imp: True for imp in imports})
         structure['patterns']['imports'].extend(imports)
         
         # Find classes
-        classes = re.finditer(self.CLASS_PATTERNS['javascript'], content)
+        classes = re.finditer(self.PATTERNS['class']['javascript'], content)
         for match in classes:
             structure['patterns']['class_patterns'].append({
                 'name': match.group(1),
@@ -681,7 +679,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find functions (including arrow functions)
-        functions = re.finditer(self.FUNCTION_PATTERNS['javascript'], content)
+        functions = re.finditer(self.PATTERNS['function']['javascript'], content)
         for match in functions:
             name = match.group(1) or match.group(2)  # Get name from either function or variable
             structure['patterns']['function_patterns'].append({
@@ -691,7 +689,7 @@ Do not include technical metrics in the description."""
             })
             
         # Find object methods
-        methods = re.finditer(self.METHOD_PATTERN, content)
+        methods = re.finditer(self.PATTERNS['method'], content)
         for match in methods:
             structure['patterns']['function_patterns'].append({
                 'name': match.group(1),
@@ -701,7 +699,7 @@ Do not include technical metrics in the description."""
             })
             
         # Find variables and constants
-        variables = re.finditer(self.VARIABLE_PATTERN, content)
+        variables = re.finditer(self.PATTERNS['variable'], content)
         for match in variables:
             structure['patterns']['variable_patterns'].append({
                 'name': match.group(1),
@@ -710,7 +708,7 @@ Do not include technical metrics in the description."""
             })
             
         # Find error handling patterns
-        try_blocks = re.finditer(self.ERROR_PATTERN, content)
+        try_blocks = re.finditer(self.PATTERNS['error'], content)
         for match in try_blocks:
             structure['patterns']['error_patterns'].append({
                 'exception_var': match.group(1),
@@ -727,12 +725,12 @@ Do not include technical metrics in the description."""
     def _analyze_kotlin_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze Kotlin file content."""
         # Find imports
-        imports = re.findall(self.IMPORT_PATTERNS['kotlin'], content)
+        imports = re.findall(self.PATTERNS['import']['kotlin'], content)
         structure['dependencies'].update({imp: True for imp in imports})
         structure['patterns']['imports'].extend(imports)
         
         # Find classes
-        classes = re.finditer(self.CLASS_PATTERNS['kotlin'], content)
+        classes = re.finditer(self.PATTERNS['class']['kotlin'], content)
         for match in classes:
             structure['patterns']['class_patterns'].append({
                 'name': match.group(1),
@@ -741,7 +739,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find functions
-        functions = re.finditer(self.FUNCTION_PATTERNS['kotlin'], content)
+        functions = re.finditer(self.PATTERNS['function']['kotlin'], content)
         for match in functions:
             structure['patterns']['function_patterns'].append({
                 'name': match.group(1),
@@ -807,12 +805,12 @@ Do not include technical metrics in the description."""
     def _analyze_swift_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze Swift file content."""
         # Find imports
-        imports = re.findall(self.IMPORT_PATTERNS['swift'], content)
+        imports = re.findall(self.PATTERNS['import']['swift'], content)
         structure['dependencies'].update({imp: True for imp in imports})
         structure['patterns']['imports'].extend(imports)
         
         # Find classes and protocols
-        classes = re.finditer(self.CLASS_PATTERNS['swift'], content)
+        classes = re.finditer(self.PATTERNS['class']['swift'], content)
         for match in classes:
             structure['patterns']['class_patterns'].append({
                 'name': match.group(1),
@@ -821,7 +819,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find functions
-        functions = re.finditer(self.FUNCTION_PATTERNS['swift'], content)
+        functions = re.finditer(self.PATTERNS['function']['swift'], content)
         for match in functions:
             structure['patterns']['function_patterns'].append({
                 'name': match.group(1),
@@ -833,12 +831,12 @@ Do not include technical metrics in the description."""
     def _analyze_ts_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze TypeScript/TSX file content."""
         # Find imports
-        imports = re.findall(self.IMPORT_PATTERNS['typescript'], content)
+        imports = re.findall(self.PATTERNS['import']['typescript'], content)
         structure['dependencies'].update({imp: True for imp in imports})
         structure['patterns']['imports'].extend(imports)
         
         # Find interfaces and types
-        interfaces = re.finditer(self.INTERFACE_PATTERN, content)
+        interfaces = re.finditer(self.PATTERNS['interface'], content)
         for match in interfaces:
             structure['patterns']['class_patterns'].append({
                 'name': match.group(1),
@@ -848,7 +846,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find classes and components
-        classes = re.finditer(self.CLASS_PATTERNS['typescript'], content)
+        classes = re.finditer(self.PATTERNS['class']['typescript'], content)
         for match in classes:
             structure['patterns']['class_patterns'].append({
                 'name': match.group(1),
@@ -858,7 +856,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find functions and hooks
-        functions = re.finditer(self.FUNCTION_PATTERNS['typescript'], content)
+        functions = re.finditer(self.PATTERNS['function']['typescript'], content)
         for match in functions:
             name = match.group(1)
             is_hook = name.startswith('use') and name[3].isupper()
@@ -872,7 +870,7 @@ Do not include technical metrics in the description."""
         
         # Find JSX components in TSX files
         if rel_path.endswith('.tsx'):
-            components = re.finditer(self.JSX_COMPONENT_PATTERN, content)
+            components = re.finditer(self.PATTERNS['jsx_component'], content)
             for match in components:
                 component_name = match.group(1)
                 if component_name[0].isupper():  # Custom components start with uppercase
@@ -885,12 +883,12 @@ Do not include technical metrics in the description."""
     def _analyze_cpp_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze C++ file content."""
         # Find includes
-        includes = re.findall(self.IMPORT_PATTERNS['cpp'], content)
+        includes = re.findall(self.PATTERNS['import']['cpp'], content)
         structure['dependencies'].update({inc: True for inc in includes})
         structure['patterns']['imports'].extend(includes)
         
         # Find classes and structs
-        classes = re.finditer(self.CLASS_PATTERNS['cpp'], content)
+        classes = re.finditer(self.PATTERNS['class']['cpp'], content)
         for match in classes:
             structure['patterns']['class_patterns'].append({
                 'name': match.group(1),
@@ -899,7 +897,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find functions and methods
-        functions = re.finditer(self.FUNCTION_PATTERNS['cpp'], content)
+        functions = re.finditer(self.PATTERNS['function']['cpp'], content)
         for match in functions:
             structure['patterns']['function_patterns'].append({
                 'name': match.group(1),
@@ -928,12 +926,12 @@ Do not include technical metrics in the description."""
     def _analyze_c_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze C file content."""
         # Find includes
-        includes = re.findall(self.IMPORT_PATTERNS['c'], content)
+        includes = re.findall(self.PATTERNS['import']['c'], content)
         structure['dependencies'].update({inc: True for inc in includes})
         structure['patterns']['imports'].extend(includes)
         
         # Find structs and unions
-        structs = re.finditer(self.CLASS_PATTERNS['c'], content)
+        structs = re.finditer(self.PATTERNS['class']['c'], content)
         for match in structs:
             structure['patterns']['class_patterns'].append({
                 'name': match.group(1),
@@ -942,7 +940,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find functions
-        functions = re.finditer(self.FUNCTION_PATTERNS['c'], content)
+        functions = re.finditer(self.PATTERNS['function']['c'], content)
         for match in functions:
             structure['patterns']['function_patterns'].append({
                 'name': match.group(1),
@@ -984,12 +982,12 @@ Do not include technical metrics in the description."""
     def _analyze_csharp_file(self, content: str, rel_path: str, structure: Dict[str, Any]):
         """Analyze C# file content."""
         # Find using statements
-        imports = re.findall(self.IMPORT_PATTERNS['csharp'], content)
+        imports = re.findall(self.PATTERNS['import']['csharp'], content)
         structure['dependencies'].update({imp: True for imp in imports})
         structure['patterns']['imports'].extend(imports)
         
         # Find classes and interfaces
-        classes = re.finditer(self.CLASS_PATTERNS['csharp'], content)
+        classes = re.finditer(self.PATTERNS['class']['csharp'], content)
         for match in classes:
             inheritance = match.group(2)
             if inheritance:
@@ -1008,7 +1006,7 @@ Do not include technical metrics in the description."""
             })
         
         # Find methods
-        methods = re.finditer(self.FUNCTION_PATTERNS['csharp'], content)
+        methods = re.finditer(self.PATTERNS['function']['csharp'], content)
         for match in methods:
             structure['patterns']['function_patterns'].append({
                 'return_type': match.group(1),
