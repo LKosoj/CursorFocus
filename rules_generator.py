@@ -500,7 +500,7 @@ Critical Guidelines for AI:
     
             # Get AI response
             response = self.client.chat.completions.create(
-                model="google/gemini-flash-1.5",
+                model="google/gemini-2.0-flash-001",
                 messages=[
                     {"role": "system", "content": "You are a helpful AI code analysis assistant."},
                     {"role": "user", "content": prompt}
@@ -591,7 +591,7 @@ Do not include technical metrics in the description."""
 
             # Get AI response
             response = self.client.chat.completions.create(
-                model="google/gemini-flash-1.5",
+                model="google/gemini-2.0-flash-001",
                 messages=[
                     {"role": "system", "content": "You are a helpful AI project description generator."},
                     {"role": "user", "content": prompt}
